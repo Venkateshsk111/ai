@@ -80,5 +80,5 @@ jobs:
           curl --fail --silent --show-error --location --retry 4 --retry-delay 3 \
             --user-agent "IdeaProof-QA/1.0" "$share_url" > /tmp/live.html
           grep --quiet "<title>IdeaProof" /tmp/live.html
-          grep --quiet "Validate before you build" /tmp/live.html
+          grep --quiet "Test the idea before you build it" /tmp/live.html
           echo "Public IdeaProof experience is reachable."
