@@ -73,3 +73,12 @@ jobs:
           assert not missing, "Missing required flows: " + ", ".join(missing)
           print("Core validation journeys are present.")
           PY
+
+      - name: Smoke test public share URL
+        run: |
+          share_url="https://raw.githack.com/Venkateshsk111/ai/main/index.html"
+          curl --fail --silent --show-error --location --retry 4 --retry-delay 3 \
+            --user-agent "IdeaProof-QA/1.0" "$share_url" > /tmp/live.html
+          grep --quiet "<title>IdeaProof" /tmp/live.html
+          grep --quiet "Validate before you build" /tmp/live.html
+          echo "Public IdeaProof experience is reachable."
