@@ -1,0 +1,75 @@
+name: Validate IdeaProof
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Check HTML structure
+        run: |
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          source = Path("index.html").read_text(encoding="utf-8")
+          assert "<!doctype html>" in source.lower()
+          assert source.count("<script>") == 1
+          assert source.count("</script>") == 1
+
+          class Checker(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.ids = set()
+                  self.duplicates = []
+              def handle_starttag(self, tag, attrs):
+                  values = dict(attrs)
+                  if "id" in values:
+                      if values["id"] in self.ids:
+                          self.duplicates.append(values["id"])
+                      self.ids.add(values["id"])
+
+          checker = Checker()
+          checker.feed(source)
+          assert not checker.duplicates, "Duplicate ids: " + ", ".join(checker.duplicates)
+          print("HTML structure and IDs look good.")
+          PY
+
+      - name: Check JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          source = Path("index.html").read_text(encoding="utf-8")
+          script = source.rsplit("<script>", 1)[1].split("</script>", 1)[0]
+          Path("/tmp/ideaproof.js").write_text(script, encoding="utf-8")
+          PY
+          node --check /tmp/ideaproof.js
+
+      - name: Check required user journeys
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          source = Path("index.html").read_text(encoding="utf-8")
+          required = [
+              "continueToEvidence",
+              "runAnalysis",
+              "saveCurrent",
+              "showVault",
+              "showCompare",
+              "toggleVoice",
+              "exportCurrent",
+              "hypothesis-based"
+          ]
+          missing = [item for item in required if item not in source]
+          assert not missing, "Missing required flows: " + ", ".join(missing)
+          print("Core validation journeys are present.")
+          PY
